@@ -32,6 +32,8 @@ ndk-context = "0.1"
 jni = "0.22"
 
 [dependencies]
+iroh-gossip = "0.103"
+iroh-topic-tracker = "0.2.1"
 iroh-mainline-address-lookup = { version = "0.6.1", optional = true }
 anyhow = "1.0.69"
 async-trait = "0.1.80"

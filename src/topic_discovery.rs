@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use futures_lite::StreamExt;
-use iroh_gossip::net::Gossip;
-use iroh_gossip::{Event as GossipEvent, GossipReceiver, GossipSender};
+use iroh_gossip::{Event as GossipEvent, Gossip, GossipReceiver, GossipSender};
 use iroh_topic_tracker::{TopicDiscoveryConfig, TopicDiscoveryExt};
 use tokio::sync::Mutex;
 
@@ -36,6 +35,7 @@ pub enum TopicEvent {
     NeighborDown { endpoint_id: String },
     Received { message: TopicMessage },
     Lagged,
+    Unknown,
 }
 
 #[derive(uniffi::Object)]
@@ -117,6 +117,7 @@ impl TopicSubscription {
                 },
             },
             GossipEvent::Lagged => TopicEvent::Lagged,
+            _ => TopicEvent::Unknown,
         }))
     }
 

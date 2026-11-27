@@ -185,7 +185,6 @@ impl Preset for N0DisableRelayPreset {
         builder.apply_n0_disable_relay();
     }
 }
-
 /// The n0 production preset (relays + discovery).
 #[uniffi::export]
 pub fn preset_n0() -> Arc<dyn Preset> {
@@ -387,8 +386,7 @@ impl Endpoint {
         let addrs = info.into_addrs().map(|a| a.into_addr());
         Some(Arc::new(iroh::EndpointAddr::from_parts(id, addrs).into()))
     }
-
-    /// Get current statistics for this endpoint.
+     /// Get current statistics for this endpoint.
     ///
     /// Keys are `"<group>:<metric>"`. Counter / gauge values are saturating-cast to `u32`.
     pub fn stats(&self) -> HashMap<String, CounterStats> {
@@ -770,7 +768,6 @@ pub struct BiStream {
     send: SendStream,
     recv: RecvStream,
 }
-
 #[uniffi::export]
 impl BiStream {
     pub fn send(&self) -> SendStream {

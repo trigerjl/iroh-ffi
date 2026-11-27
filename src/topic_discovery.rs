@@ -1,64 +1,43 @@
-//! FFI bindings for `iroh-gossip` + `iroh-topic-tracker`.
-//!
-//! Exposes a small, UniFFI-friendly API for subscribing to a gossip topic
-//! with DHT-based peer discovery via `iroh-topic-tracker`.
-
 use std::sync::Arc;
 
 use bytes::Bytes;
 use futures_lite::StreamExt;
-use iroh_gossip::api::{Event as GossipEvent, GossipReceiver, GossipSender};
 use iroh_gossip::net::Gossip;
+use iroh_gossip::{Event as GossipEvent, GossipReceiver, GossipSender};
 use iroh_topic_tracker::{TopicDiscoveryConfig, TopicDiscoveryExt};
 use tokio::sync::Mutex;
 
 use crate::{Endpoint, IrohError};
 
-/// Options for topic discovery.
 #[derive(Debug, Clone, Default, uniffi::Record)]
 pub struct TopicDiscoveryOptions {
-    /// Max peers to attempt to connect to per discovery round.
     #[uniffi(default = None)]
     pub max_peers_per_round: Option<u64>,
-    /// Connection timeout in milliseconds.
     #[uniffi(default = None)]
     pub connection_timeout_ms: Option<u64>,
-    /// DHT announce interval in milliseconds.
     #[uniffi(default = None)]
     pub announce_interval_ms: Option<u64>,
-    /// Discovery interval when connected in milliseconds.
     #[uniffi(default = None)]
     pub discovery_interval_ms: Option<u64>,
-    /// Discovery interval when no peers in milliseconds.
     #[uniffi(default = None)]
     pub discovery_interval_no_peers_ms: Option<u64>,
 }
 
-/// A gossip message received from a topic.
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct TopicMessage {
-    /// Message content bytes.
     pub content: Vec<u8>,
-    /// Endpoint id of the peer that delivered the message.
     pub delivered_from: String,
-    /// Whether the message came directly from its broadcaster.
     pub is_direct: bool,
 }
 
-/// Event emitted by topic subscription.
 #[derive(Debug, Clone, uniffi::Enum)]
 pub enum TopicEvent {
-    /// A neighbor joined the topic swarm.
     NeighborUp { endpoint_id: String },
-    /// A neighbor left the topic swarm.
     NeighborDown { endpoint_id: String },
-    /// A message was received.
     Received { message: TopicMessage },
-    /// Subscription lagged; some events were dropped.
     Lagged,
 }
 
-/// Handle to a gossip topic subscription with DHT discovery.
 #[derive(uniffi::Object)]
 pub struct TopicSubscription {
     sender: GossipSender,
@@ -82,7 +61,6 @@ impl TopicSubscription {
 
 #[uniffi::export]
 impl TopicSubscription {
-    /// Broadcast a message to all peers in the topic.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn broadcast(&self, message: Vec<u8>) -> Result<(), IrohError> {
         self.sender
@@ -92,7 +70,6 @@ impl TopicSubscription {
         Ok(())
     }
 
-    /// Broadcast a message to direct neighbors only.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn broadcast_neighbors(&self, message: Vec<u8>) -> Result<(), IrohError> {
         self.sender
@@ -102,7 +79,6 @@ impl TopicSubscription {
         Ok(())
     }
 
-    /// Join specific peers by endpoint id strings.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn join_peers(&self, peers: Vec<String>) -> Result<(), IrohError> {
         let mut ids = Vec::with_capacity(peers.len());
@@ -119,7 +95,6 @@ impl TopicSubscription {
         Ok(())
     }
 
-    /// Receive the next event from the topic. Returns None if closed.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn next_event(&self) -> Result<Option<TopicEvent>, IrohError> {
         let mut rx = self.receiver.lock().await;
@@ -145,24 +120,20 @@ impl TopicSubscription {
         }))
     }
 
-    /// Stop topic discovery. The gossip subscription remains until dropped.
     pub fn stop_discovery(&self) {
         self.discovery.stop();
     }
 
-    /// Whether discovery task is still running.
     pub fn is_discovery_running(&self) -> bool {
         self.discovery.is_running()
     }
 
-    /// Number of peers discovered/connected by discovery.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn discovered_peer_count(&self) -> u64 {
         self.discovery.added_connection_count().await as u64
     }
 }
 
-/// Gossip topic/discovery node bound to an iroh endpoint.
 #[derive(uniffi::Object)]
 pub struct GossipNode {
     gossip: Gossip,
@@ -171,14 +142,12 @@ pub struct GossipNode {
 
 #[uniffi::export]
 impl GossipNode {
-    /// Create a gossip node on an existing endpoint.
     #[uniffi::constructor(async_runtime = "tokio")]
     pub async fn spawn(endpoint: Arc<Endpoint>) -> Result<Arc<Self>, IrohError> {
         let gossip = Gossip::builder().spawn(endpoint.raw().clone());
         Ok(Arc::new(Self { gossip, endpoint }))
     }
 
-    /// Subscribe to a topic with DHT discovery. `topic_id` is arbitrary bytes.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn subscribe_with_discovery(
         &self,
@@ -223,7 +192,6 @@ impl GossipNode {
         Ok(Arc::new(TopicSubscription::new(sender, receiver, discovery)))
     }
 
-    /// Subscribe and wait until discovery has joined.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn subscribe_with_discovery_joined(
         &self,

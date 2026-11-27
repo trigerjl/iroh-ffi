@@ -9,13 +9,14 @@ mod path;
 mod relay;
 mod services;
 mod ticket;
+mod topic_discovery;
 mod watch;
 
 use tracing_subscriber::filter::LevelFilter;
 
 pub use self::{
     accept::*, endpoint::*, error::*, key::*, net::*, path::*, relay::*, services::*, ticket::*,
-    watch::*,
+    topic_discovery::*, watch::*,
 };
 
 uniffi::setup_scaffolding!();
